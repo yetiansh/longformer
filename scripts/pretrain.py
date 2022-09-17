@@ -14,9 +14,7 @@ from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 
 from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as ptl
-from pytorch_lightning.logging.test_tube import TestTubeLogger
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateLogger
-
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -412,11 +410,11 @@ def main(args):
     # logger here is a SummaryWritter for tensorboard
     # it is used by the trainer, and certain return variables
     # from the model are automatically logged
-    logger = TestTubeLogger(
-        save_dir=args.save_dir,
-        name=args.save_prefix,
-        version=0  # always use version=0
-    )
+    # logger = TestTubeLogger(
+    #     save_dir=args.save_dir,
+    #     name=args.save_prefix,
+    #     version=0  # always use version=0
+    # )
 
     checkpoint_callback = ModelCheckpoint(
         # model saved to filepath/prefix_....
@@ -443,14 +441,13 @@ def main(args):
         early_stop_callback=None,
         row_log_interval=args.log_rate,
         progress_bar_refresh_rate=args.log_rate,
-        logger=logger,
         checkpoint_callback=checkpoint_callback if not args.disable_checkpointing else None,
         accumulate_grad_batches=args.grad_accum,
         resume_from_checkpoint=args.resume,
         gradient_clip_val=args.grad_clip,
         precision=16 if args.fp16 else 32, amp_level='O2',
         num_sanity_val_steps=2,
-        callbacks=[LearningRateLogger()],
+        callbacks=[LearningRateMonitor()],
     )
     trainer.fit(pretrainer)
 

@@ -13,9 +13,8 @@ from transformers import RobertaTokenizer, AutoModel, AutoConfig, AutoModelWithL
 from scripts.triviaqa_utils import evaluation_utils
 
 import pytorch_lightning as pl
-from pytorch_lightning.logging import TestTubeLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.overrides.data_parallel import LightningDistributedDataParallel
+from pytorch_lightning.overrides import LightningDistributedModule
 
 from longformer.longformer import Longformer
 from longformer.sliding_chunks import pad_to_window_size
@@ -690,7 +689,7 @@ class TriviaQA(pl.LightningModule):
         return self.test_dataloader_object
 
     def configure_ddp(self, model, device_ids):
-        model = LightningDistributedDataParallel(
+        model = LightningDistributedModule(
             model,
             device_ids=device_ids,
             find_unused_parameters=False
@@ -755,12 +754,6 @@ def main(args):
 
     model = TriviaQA(args)
 
-    logger = TestTubeLogger(
-        save_dir=args.save_dir,
-        name=args.save_prefix,
-        version=0  # always use version=0
-    )
-
     checkpoint_callback = ModelCheckpoint(
         filepath=os.path.join(args.save_dir, args.save_prefix, "checkpoints"),
         save_top_k=5,
@@ -786,7 +779,7 @@ def main(args):
                          # check_val_every_n_epoch=2,
                          val_percent_check=args.val_percent_check,
                          test_percent_check=args.val_percent_check,
-                         logger=logger if not args.disable_checkpointing else False,
+                         logger=False,
                          checkpoint_callback=checkpoint_callback if not args.disable_checkpointing else False,
                          show_progress_bar=not args.no_progress_bar,
                          use_amp=not args.fp32, amp_level='O2',
